@@ -27,6 +27,10 @@ typedef struct {
 } CanvasStroke;
 
 int main() {
+
+    u64 mem_size = 7 * ATLR_MEGABYTE;
+    AtlrArena main_memory = atlr_mem_create_arena(malloc(mem_size), mem_size);
+    atlr_init(&main_memory);
     
     SDL_Init(SDL_INIT_VIDEO);
 
@@ -42,23 +46,22 @@ int main() {
     b32 moving = 0;
     b32 running = 1;
 
-    AtlrArena main_memory = atlr_mem_create_arena(5 * ATLR_MEGABYTE);
     AtlrArena strokes_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
     AtlrArena points_memory = atlr_mem_slice(&main_memory, 2 * ATLR_MEGABYTE);
     AtlrArena font_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
+    AtlrArena draw_memory = atlr_mem_slice(&main_memory, 10 * ATLR_KILOBYTE);
 
     CanvasStroke* strokes = (CanvasStroke*) strokes_memory.data;
     s64 strokes_count = 0;
     CanvasStroke* stroke;
-    AtlrString color_label = atlr_str_create_empty_with_capacity(15);
+    AtlrString color_label = atlr_str_create_empty_with_capacity(15, &main_memory);
     u64 color = 0xFFFF00FF;
 
-    AtlrFont nunito_font = atlr_font_load("./static/nunito.ttf", 24, &font_memory);
+    AtlrFont nunito_font = atlr_font_load("./static/nunito.ttf", 21, 24, &font_memory);
     Vec2 click_origin = {};
     while (running) {
         SDL_ClearSurface(canvas, 0.07f, 0.07f, 0.07f, 1.0f);
         atlr_str_clear(&color_label);
-
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
                 case SDL_EVENT_QUIT: {
@@ -151,7 +154,8 @@ int main() {
                     .x = curr_stroke->origin.x + p_b->x,
                     .y = curr_stroke->origin.y + p_b->y,
                 };
-                atlr_rtzr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color);
+                atlr_mem_clear(&draw_memory, "draw-mem");
+                atlr_rtzr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color, &draw_memory);
             }
         }
 
