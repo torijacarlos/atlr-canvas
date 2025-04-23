@@ -27,7 +27,7 @@ typedef struct {
 int main() {
 
     u64 mem_size = 7 * ATLR_MEGABYTE;
-    AtlrArena main_memory = atlr_mem_create_arena(malloc(mem_size), mem_size);
+    AtlrArena main_memory = atlr_mem_create_arena(malloc(mem_size), mem_size, "main");
     atlr_init(&main_memory);
     
     SDL_Init(SDL_INIT_VIDEO);
@@ -44,10 +44,10 @@ int main() {
     b32 moving = 0;
     b32 running = 1;
 
-    AtlrArena strokes_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
-    AtlrArena points_memory = atlr_mem_slice(&main_memory, 2 * ATLR_MEGABYTE);
-    AtlrArena font_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
-    AtlrArena draw_memory = atlr_mem_slice(&main_memory, 10 * ATLR_KILOBYTE);
+    AtlrArena strokes_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE, "strokes");
+    AtlrArena points_memory = atlr_mem_slice(&main_memory, 2 * ATLR_MEGABYTE, "points");
+    AtlrArena font_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE, "font");
+    AtlrArena draw_memory = atlr_mem_slice(&main_memory, 10 * ATLR_KILOBYTE, "draw");
 
     CanvasStroke* strokes = (CanvasStroke*) strokes_memory.data;
     s64 strokes_count = 0;
@@ -70,8 +70,8 @@ int main() {
                         running = 0;
                     } else if (e.key.key == 'c') {
                         strokes_count = 0;
-                        atlr_mem_clear(&strokes_memory, "strokes");
-                        atlr_mem_clear(&points_memory, "points");
+                        atlr_mem_clear(&strokes_memory);
+                        atlr_mem_clear(&points_memory);
                     }
                 } break;
 
@@ -152,7 +152,7 @@ int main() {
                     .x = curr_stroke->origin.x + p_b->x,
                     .y = curr_stroke->origin.y + p_b->y,
                 };
-                atlr_mem_clear(&draw_memory, "draw-mem");
+                atlr_mem_clear(&draw_memory);
                 atlr_rtzr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color, &draw_memory);
             }
         }
@@ -177,8 +177,8 @@ int main() {
         SDL_RenderPresent(renderer);
     }
 
-    atlr_mem_clear(&points_memory, "points");
-    atlr_mem_clear(&strokes_memory, "strokes");
+    atlr_mem_clear(&points_memory);
+    atlr_mem_clear(&strokes_memory);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
