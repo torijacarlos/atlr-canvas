@@ -6,7 +6,8 @@ NOISE_WARNINGS=-Wno-unused-function -Wno-unused-parameter -Wno-unused-variable -
 
 .PHONY: all
 
-all: deps setup
+all: debug release
+	@echo "===== finished building"
 
 atlr:
 	@echo "------ downloading atlr"
@@ -34,15 +35,12 @@ setup:
 
 debug:
 	@echo "===== building debug"
-	@rm ./build/debug/*
-	@$(CC) $(CFLAGS) $(LINKED_LIBS) $(NOISE_WARNINGS) -g main.c -o ./build/debug/canvas
+	@rm ./build/debug/* 2> /dev/null ||:;
+	@$(CC) $(CFLAGS) $(LINKED_LIBS) $(NOISE_WARNINGS) -g -DATLR_DEBUG main.c -o ./build/debug/canvas
 
 release:
 	@echo "===== building release"
-	@rm ./build/release/*
+	@rm ./build/release/* 2> /dev/null  ||:;
 	@$(CC) $(CFLAGS) $(LINKED_LIBS) $(NOISE_WARNINGS) -O2 main.c -o ./build/release/canvas
 	@cp ./build/release/canvas ~/.local/.atelier/ ||:;
-
-build: debug release
-	@echo "===== finished building"
 
