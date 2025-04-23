@@ -10,6 +10,8 @@ PROJECT_NAME=canvas
 all: debug release
 	@echo "===== finished building"
 
+install: deps setup
+
 atlr:
 	@echo "------ downloading atlr"
 	@mkdir -p ./vendor/atlr ||:;
