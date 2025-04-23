@@ -19,6 +19,7 @@
 // TODO: Enable color picking
 
 typedef struct {
+    Vec2 origin;
     Vec2* points;
     f64 radius;
     u64 color;
@@ -38,6 +39,7 @@ int main() {
     SDL_Surface* canvas = SDL_CreateSurface(CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, window_surface->format);
 
     b32 drawing = 0;
+    b32 moving = 0;
     b32 running = 1;
 
     AtlrArena main_memory = atlr_mem_create_arena(5 * ATLR_MEGABYTE);
@@ -52,9 +54,9 @@ int main() {
     u64 color = 0xFFFF00FF;
 
     AtlrFont nunito_font = atlr_font_load("./static/nunito.ttf", 24, &font_memory);
-    u64 shift = 0;
+    Vec2 click_origin = {};
     while (running) {
-        SDL_ClearSurface(canvas, 0, 0, 0, 0);
+        SDL_ClearSurface(canvas, 0.07f, 0.07f, 0.07f, 1.0f);
         atlr_str_clear(&color_label);
 
         while (SDL_PollEvent(&e)) {
@@ -71,28 +73,49 @@ int main() {
                 case SDL_EVENT_MOUSE_MOTION: {
                     if (drawing) {
                         Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
-                        point->x = e.motion.x - (CANVAS_DEFAULT_WIDTH / 2);
-                        point->y = (CANVAS_DEFAULT_HEIGHT) - e.motion.y - (CANVAS_DEFAULT_HEIGHT / 2);
+                        point->x = e.motion.x - (canvas->w / 2) - stroke->origin.x;
+                        point->y = (canvas->h) - e.motion.y - (canvas->h / 2) - stroke->origin.y;
                         stroke->count++;
+                    } else if (moving) {
+                        for (s64 s = 0; s < strokes_count; s++) {
+                            CanvasStroke* curr_stroke = (CanvasStroke*) strokes_memory.data + s;
+                            curr_stroke->origin.x += e.motion.x - (canvas->w / 2) - click_origin.x;
+                            curr_stroke->origin.y += (canvas->h) - e.motion.y - (canvas->h / 2) -  click_origin.y;
+                        }
+                        click_origin.x = e.motion.x - (canvas->w / 2);
+                        click_origin.y = (canvas->h) - e.motion.y - (canvas->h / 2);
                     }
                 } break;
                 case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-                    stroke = (CanvasStroke*) atlr_mem_allocate(&strokes_memory, sizeof(CanvasStroke));
-                    stroke->points = (Vec2*) ((u8*) points_memory.data + points_memory.used);
-                    stroke->radius = 1.0f;
-                    stroke->color = color;
-                    stroke->count = 0;
-                    strokes_count++;
+                    atlr_log_debug("button: %d", e.button.button);
+                    if (e.button.button == 1) {
+                        stroke = (CanvasStroke*) atlr_mem_allocate(&strokes_memory, sizeof(CanvasStroke));
+                        stroke->origin.x = e.button.x - (canvas->w / 2);
+                        stroke->origin.y = (canvas->h) - e.button.y - (canvas->h / 2);
+                        stroke->points = (Vec2*) ((u8*) points_memory.data + points_memory.used);
+                        stroke->radius = 1.0f;
+                        stroke->color = color;
+                        stroke->count = 0;
+                        strokes_count++;
 
-                    Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
-                    point->x = e.motion.x - (CANVAS_DEFAULT_WIDTH / 2);
-                    point->y = (CANVAS_DEFAULT_HEIGHT) - e.motion.y - (CANVAS_DEFAULT_HEIGHT / 2);
-                    drawing = 1;
-                    stroke->count++;
+                        Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
+                        point->x = e.button.x - (canvas->w / 2) - stroke->origin.x;
+                        point->y = (canvas->h) - e.button.y - (canvas->h / 2) - stroke->origin.y;
+                        drawing = 1;
+                        stroke->count++;
+                    } else if (e.button.button == 2) {
+                        moving = 1;
+                        click_origin.x = e.button.x - (canvas->w / 2);
+                        click_origin.y = (canvas->h) - e.button.y - (canvas->h / 2);
+                    }
                 
                 } break;
                 case SDL_EVENT_MOUSE_BUTTON_UP: {
-                    drawing = 0;
+                    if (e.button.button == 1) {
+                        drawing = 0;
+                    } else if (e.button.button == 2) {
+                        moving = 0;
+                    }
                 } break;
                 case SDL_EVENT_MOUSE_WHEEL: {
                     u64 r = ((color & 0xFF000000) >> 24) + (e.wheel.y + 10);
@@ -100,6 +123,12 @@ int main() {
                     u64 b = ((color & 0x0000FF00) >> 8) +  (e.wheel.y + 10);
                     u64 a = ((color & 0x000000FF));
                     color = (r << 24 | g << 16 | b << 8 | a);
+                } break;
+
+                case SDL_EVENT_WINDOW_RESIZED: {
+                    window_surface = SDL_GetWindowSurface(window);
+                    SDL_DestroySurface(canvas);
+                    canvas = SDL_CreateSurface(window_surface->w, window_surface->h, window_surface->format);
                 } break;
                 default: break;
             }
@@ -110,7 +139,15 @@ int main() {
             for (s64 i = 0; i < curr_stroke->count - 1; i++) {
                 Vec2* p_a = (Vec2*) curr_stroke->points + i;
                 Vec2* p_b = (Vec2*) curr_stroke->points + i + 1;
-                atlr_rtzr_draw_line(canvas->pixels, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, *p_a, *p_b, curr_stroke->color);
+                Vec2 pa = {
+                    .x = curr_stroke->origin.x + p_a->x,
+                    .y = curr_stroke->origin.y + p_a->y,
+                };
+                Vec2 pb = {
+                    .x = curr_stroke->origin.x + p_b->x,
+                    .y = curr_stroke->origin.y + p_b->y,
+                };
+                atlr_rtzr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color);
             }
         }
 
@@ -119,11 +156,11 @@ int main() {
 
         atlr_rtzr_draw_label(
             canvas->pixels, 
-            CANVAS_DEFAULT_WIDTH, 
-            CANVAS_DEFAULT_HEIGHT, 
+            canvas->w, 
+            canvas->h, 
             &color_label, 
             0xFFFFFFFF, 
-            (Vec2) { .x = - (CANVAS_DEFAULT_WIDTH / 2), .y = (CANVAS_DEFAULT_HEIGHT / 2)}, 
+            (Vec2) { .x = - (canvas->w / 2), .y = (canvas->h / 2)}, 
             &nunito_font
         );
         if (!SDL_BlitSurface(canvas, NULL, window_surface, NULL)) {
