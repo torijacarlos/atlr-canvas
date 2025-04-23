@@ -17,7 +17,7 @@ typedef struct {
     Vec2* points;
     f64 radius;
     u64 color;
-    u64 count;
+    s64 count;
 } CanvasStroke;
 
 int main() {
@@ -70,7 +70,6 @@ int main() {
                     Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
                     point->x = e.motion.x - (CANVAS_DEFAULT_WIDTH / 2);
                     point->y = (CANVAS_DEFAULT_HEIGHT) - e.motion.y - (CANVAS_DEFAULT_HEIGHT / 2);
-                    atlr_log_debug("%f:%f | %f:%f", point->x, point->y, e.motion.x, e.motion.y);
                     drawing = 1;
                 } break;
                 case SDL_EVENT_MOUSE_BUTTON_UP: {
@@ -81,9 +80,10 @@ int main() {
             }
         }
 
-        for (u32 i = 0; i < stroke.count; i++) {
-            Vec2* p = (Vec2* )stroke.points + i;
-            atlr_rtzr_draw_pixel(canvas->pixels, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, p->x, p->y, stroke.color);
+        for (s64 i = 0; i < stroke.count - 1; i++) {
+            Vec2* p_a = (Vec2*) stroke.points + i;
+            Vec2* p_b = (Vec2*) stroke.points + i + 1;
+            atlr_rtzr_draw_line(canvas->pixels, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, *p_a, *p_b, stroke.color);
         }
         
         if (!SDL_BlitSurface(canvas, NULL, window_surface, NULL)) {
