@@ -1,5 +1,6 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+#include <string.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -12,6 +13,10 @@
 #define CANVAS_DEFAULT_WIDTH 500
 #define CANVAS_DEFAULT_HEIGHT 300
 
+
+// TODO: Handle canvas resizing
+// TODO: Enable stroke size
+// TODO: Enable color picking
 
 typedef struct {
     Vec2* points;
@@ -35,16 +40,22 @@ int main() {
     b32 drawing = 0;
     b32 running = 1;
 
-    AtlrArena points_memory = atlr_mem_create_arena(5 * ATLR_MEGABYTE);
+    AtlrArena main_memory = atlr_mem_create_arena(5 * ATLR_MEGABYTE);
+    AtlrArena strokes_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
+    AtlrArena points_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
+    AtlrArena font_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
 
-    CanvasStroke stroke = {
-        .points = points_memory.data,
-        .radius = 1.0f,
-        .color = 0xFFFF00FF,
-        .count = 0,
-    };
+    CanvasStroke* strokes = (CanvasStroke*) strokes_memory.data;
+    s64 strokes_count = 0;
+    CanvasStroke* stroke;
+    AtlrString color_label = atlr_str_create_empty_with_capacity(15);
+    u64 color = 0xFFFF00FF;
+
+    AtlrFont nunito_font = atlr_font_load("./static/nunito.ttf", 24, &font_memory);
+    u64 shift = 0;
     while (running) {
         SDL_ClearSurface(canvas, 0, 0, 0, 0);
+        atlr_str_clear(&color_label);
 
         while (SDL_PollEvent(&e)) {
             switch (e.type) {
@@ -59,33 +70,62 @@ int main() {
 
                 case SDL_EVENT_MOUSE_MOTION: {
                     if (drawing) {
-                        stroke.count++;
                         Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
                         point->x = e.motion.x - (CANVAS_DEFAULT_WIDTH / 2);
                         point->y = (CANVAS_DEFAULT_HEIGHT) - e.motion.y - (CANVAS_DEFAULT_HEIGHT / 2);
+                        stroke->count++;
                     }
                 } break;
                 case SDL_EVENT_MOUSE_BUTTON_DOWN: {
-                    stroke.count++;
+                    stroke = (CanvasStroke*) atlr_mem_allocate(&strokes_memory, sizeof(CanvasStroke));
+                    stroke->points = (Vec2*) ((u8*) points_memory.data + points_memory.used);
+                    stroke->radius = 1.0f;
+                    stroke->color = color;
+                    stroke->count = 0;
+                    strokes_count++;
+
                     Vec2* point = (Vec2*)atlr_mem_allocate(&points_memory, sizeof(Vec2));
                     point->x = e.motion.x - (CANVAS_DEFAULT_WIDTH / 2);
                     point->y = (CANVAS_DEFAULT_HEIGHT) - e.motion.y - (CANVAS_DEFAULT_HEIGHT / 2);
                     drawing = 1;
+                    stroke->count++;
+                
                 } break;
                 case SDL_EVENT_MOUSE_BUTTON_UP: {
-                    // TODO: create new stroke
                     drawing = 0;
+                } break;
+                case SDL_EVENT_MOUSE_WHEEL: {
+                    u64 r = ((color & 0xFF000000) >> 24) + (e.wheel.y + 10);
+                    u64 g = ((color & 0x00FF0000) >> 16) + (e.wheel.y + 10);
+                    u64 b = ((color & 0x0000FF00) >> 8) +  (e.wheel.y + 10);
+                    u64 a = ((color & 0x000000FF));
+                    color = (r << 24 | g << 16 | b << 8 | a);
                 } break;
                 default: break;
             }
         }
 
-        for (s64 i = 0; i < stroke.count - 1; i++) {
-            Vec2* p_a = (Vec2*) stroke.points + i;
-            Vec2* p_b = (Vec2*) stroke.points + i + 1;
-            atlr_rtzr_draw_line(canvas->pixels, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, *p_a, *p_b, stroke.color);
+        for (s64 s = 0; s < strokes_count; s++) {
+            CanvasStroke* curr_stroke = (CanvasStroke*) strokes_memory.data + s;
+            for (s64 i = 0; i < curr_stroke->count - 1; i++) {
+                Vec2* p_a = (Vec2*) curr_stroke->points + i;
+                Vec2* p_b = (Vec2*) curr_stroke->points + i + 1;
+                atlr_rtzr_draw_line(canvas->pixels, CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, *p_a, *p_b, curr_stroke->color);
+            }
         }
-        
+
+        sprintf(color_label.data, "0x%08lX", color);
+        color_label.len = strlen(color_label.data);
+
+        atlr_rtzr_draw_label(
+            canvas->pixels, 
+            CANVAS_DEFAULT_WIDTH, 
+            CANVAS_DEFAULT_HEIGHT, 
+            &color_label, 
+            0xFFFFFFFF, 
+            (Vec2) { .x = - (CANVAS_DEFAULT_WIDTH / 2), .y = (CANVAS_DEFAULT_HEIGHT / 2)}, 
+            &nunito_font
+        );
         if (!SDL_BlitSurface(canvas, NULL, window_surface, NULL)) {
             atlr_log_error("failed blit of canvas into window surface");
         }
@@ -94,7 +134,8 @@ int main() {
         SDL_RenderPresent(renderer);
     }
 
-    atlr_mem_free(&points_memory, "memory");
+    atlr_mem_clear(&points_memory, "points");
+    atlr_mem_clear(&strokes_memory, "strokes");
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
