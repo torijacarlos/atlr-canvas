@@ -4,33 +4,45 @@ LIBS=c m
 LINKED_LIBS=$(foreach L, $(LIBS), -l$(L)) $(shell pkg-config --libs sdl3)
 NOISE_WARNINGS=-Wno-unused-function -Wno-unused-parameter -Wno-unused-variable -Wno-missing-braces
 PROJECT_NAME=canvas
+RAW_GITHUB=https://raw.githubusercontent.com
 
 .PHONY: all
 
 all: debug release
 	@echo "===== finished building"
 
-install: deps setup
+install: clean deps setup
 
 atlr:
-	@echo "------ downloading atlr"
-	@mkdir -p ./vendor/atlr ||:;
-	@rm ./vendor/atlr/* ||:;
-	@curl -s https://raw.githubusercontent.com/torijacarlos/atlr/refs/heads/main/atlr.h > ./vendor/atlr/atlr.h
-	@curl -s https://raw.githubusercontent.com/torijacarlos/atlr/refs/heads/main/LICENSE > ./vendor/atlr/LICENSE
+	@if [ -s ./vendor/atlr/atlr.h ]; then        \
+		echo "------ atlr: installed ";          \
+	else                                         \
+		echo "------ atlr: downloading ";        \
+		mkdir -p ./vendor/atlr 2> /dev/null ||:; \
+		curl -s $(RAW_GITHUB)/torijacarlos/atlr/refs/heads/main/atlr.h > ./vendor/atlr/atlr.h;   \
+		curl -s $(RAW_GITHUB)/torijacarlos/atlr/refs/heads/main/LICENSE > ./vendor/atlr/LICENSE; \
+	fi;
 
 stb:
-	@echo "------ downloading stb"
-	@mkdir -p ./vendor/stb ||:;
-	@rm ./vendor/stb/* ||:;
-	@curl -s https://raw.githubusercontent.com/nothings/stb/refs/heads/master/LICENSE > ./vendor/stb/LICENSE
-	@curl -s https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_truetype.h > ./vendor/stb/stb_truetype.h
-	@curl -s https://raw.githubusercontent.com/nothings/stb/refs/heads/master/stb_image.h > ./vendor/stb/stb_image.h
+	@if [ -s ./vendor/stb/stb_truetype.h ]; then \
+		echo "------ stb: installed ";           \
+	else                                         \
+		echo "------ stb: downloading ";         \
+		mkdir -p ./vendor/stb 2> /dev/null ||:;  \
+		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/LICENSE > ./vendor/stb/LICENSE;               \
+		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/stb_truetype.h > ./vendor/stb/stb_truetype.h; \
+		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/stb_image.h > ./vendor/stb/stb_image.h;       \
+	fi; 
+
 
 sdl3:
-	@echo "------ make sure you have installed sdl3"
+	@echo "------ sdl3: make sure you have installed sdl3"
 
 deps: atlr stb sdl3
+
+clean:
+	@echo "------ cleaning"
+	@rm -rf ./vendor 2> /dev/null ||:;
 
 setup:
 	@mkdir -p ./build/debug ||:;
