@@ -44,7 +44,7 @@ int main() {
 
     AtlrArena main_memory = atlr_mem_create_arena(5 * ATLR_MEGABYTE);
     AtlrArena strokes_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
-    AtlrArena points_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
+    AtlrArena points_memory = atlr_mem_slice(&main_memory, 2 * ATLR_MEGABYTE);
     AtlrArena font_memory = atlr_mem_slice(&main_memory, 1 * ATLR_MEGABYTE);
 
     CanvasStroke* strokes = (CanvasStroke*) strokes_memory.data;
@@ -67,6 +67,10 @@ int main() {
                 case SDL_EVENT_KEY_UP: {
                     if (e.key.key == 'q') {
                         running = 0;
+                    } else if (e.key.key == 'c') {
+                        strokes_count = 0;
+                        atlr_mem_clear(&strokes_memory, "strokes");
+                        atlr_mem_clear(&points_memory, "points");
                     }
                 } break;
 
