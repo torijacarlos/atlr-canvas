@@ -13,8 +13,6 @@
 #define CANVAS_DEFAULT_WIDTH 500
 #define CANVAS_DEFAULT_HEIGHT 300
 
-
-// TODO: Handle canvas resizing
 // TODO: Enable stroke size
 // TODO: Enable color picking
 
