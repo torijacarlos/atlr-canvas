@@ -2,9 +2,7 @@
 #include <SDL3/SDL_main.h>
 #include <string.h>
 
-#define STB_IMAGE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
-#include "./vendor/stb/stb_image.h"
 #include "./vendor/stb/stb_truetype.h"
 
 #include "./vendor/atlr/atlr.h"

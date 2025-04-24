@@ -31,7 +31,6 @@ stb:
 		mkdir -p ./vendor/stb 2> /dev/null ||:;  \
 		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/LICENSE > ./vendor/stb/LICENSE;               \
 		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/stb_truetype.h > ./vendor/stb/stb_truetype.h; \
-		curl -s $(RAW_GITHUB)/nothings/stb/refs/heads/master/stb_image.h > ./vendor/stb/stb_image.h;       \
 	fi; 
 
 
