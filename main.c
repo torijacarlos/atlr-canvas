@@ -22,6 +22,23 @@ typedef struct {
     s64 count;
 } CanvasStroke;
 
+static AtlrFont canvas_load_font(void* font_data, f32 font_scale, AtlrArena* memory) {
+    stbtt_fontinfo stb_font = {};
+    s32 offset = stbtt_GetFontOffsetForIndex((u8*) font_data, 0);
+    stbtt_InitFont(&stb_font, (u8*) font_data, offset);
+    f32 pixel_height = stbtt_ScaleForPixelHeight(&stb_font, font_scale);
+    AtlrFont atlr_font = atlr_font_create(font_scale, pixel_height, stb_font.numGlyphs, memory);
+    char glyphs[] = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.:'";
+    s32 w, h, x_off, y_off;
+    for (u64 i = 0; i < strlen(glyphs); i++) {
+        u8 *bitmap = stbtt_GetCodepointBitmap(&stb_font, 0, atlr_font.pixel_height, glyphs[i], &w, &h, &x_off, &y_off);
+        s32 x_shift = x_off;
+        s32 y_shift = h + y_off;
+        atlr_font_add_glyph(&atlr_font, glyphs[i], bitmap, w, h, x_shift, y_shift);
+    }
+    return atlr_font;
+}
+
 int main() {
 
     u64 mem_size = 7 * ATLR_MEGABYTE;
@@ -53,7 +70,10 @@ int main() {
     AtlrString color_label = atlr_str_create_empty_with_capacity(15, &main_memory);
     u64 color = 0xFFFF00FF;
 
-    AtlrFont nunito_font = atlr_font_load("./static/nunito.ttf", 21, 24, &font_memory);
+    AtlrFile* font_file = atlr_fs_get_file("./static/nunito.ttf", 28, &font_memory);
+    atlr_fs_load_file(font_file, &font_memory);
+    AtlrFont nunito_font = canvas_load_font(font_file->data, 24, &font_memory);
+
     Vec2 click_origin = {};
     while (running) {
         SDL_ClearSurface(canvas, 0.07f, 0.07f, 0.07f, 1.0f);
