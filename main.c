@@ -5,7 +5,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "./vendor/stb/stb_truetype.h"
 
-#include "./vendor/atlr/atlr.h"
+// #include "./vendor/atlr/atlr.h"
+#include "../atlr-single-header/atlr.h"
 
 
 #define CANVAS_DEFAULT_WIDTH 500
@@ -37,6 +38,39 @@ static AtlrFont canvas_load_font(void* font_data, f32 font_scale, AtlrArena* mem
         atlr_font_add_glyph(&atlr_font, glyphs[i], bitmap, w, h, x_shift, y_shift);
     }
     return atlr_font;
+}
+
+static void atlr_draw_line_original(u32* data, s32 w, s32 h, Vec2 from, Vec2 to, u32 color, AtlrArena* memory) {
+    if (atlr_algebra_vec2_equal(from, to)) {
+        atlr_draw_pixel(data, w, h, from.x, from.y, color);
+        return;
+    }
+
+    Vec2 first_point = from;
+    Vec2 last_point = to;
+    Vec2 vector = atlr_algebra_vec2_substract(last_point, first_point);
+
+    Line line;
+
+    if (fabs(vector.x) > fabs(vector.y))  {
+        if (last_point.x < first_point.x) {
+            first_point = to;
+            last_point = from;
+        }
+        line = atlr_interpolate(last_point.y, first_point.y, last_point.x, first_point.x, memory);
+        for (u32 i = 0; i < line.count; i++) {
+            atlr_draw_pixel(data, w, h, line.points[i].values[0], line.points[i].values[1], color);
+        }
+    } else {
+        if (last_point.y < first_point.y) {
+            first_point = to;
+            last_point = from;
+        }
+        line = atlr_interpolate(last_point.x, first_point.x, last_point.y, first_point.y, memory);
+        for (u32 i = 0; i < line.count; i++) {
+            atlr_draw_pixel(data, w, h, line.points[i].values[1], line.points[i].values[0], color);
+        }
+    }
 }
 
 int main() {
@@ -75,6 +109,7 @@ int main() {
     AtlrFont nunito_font = canvas_load_font(font_file->data, 24, &font_memory);
 
     Vec2 click_origin = {};
+    atlr_profile_start_with_id("parent", 0);
     while (running) {
         SDL_ClearSurface(canvas, 0.07f, 0.07f, 0.07f, 1.0f);
         atlr_str_clear(&color_label);
@@ -171,14 +206,22 @@ int main() {
                     .y = curr_stroke->origin.y + p_b->y,
                 };
                 atlr_mem_clear(&draw_memory);
-                atlr_rtzr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color, &draw_memory);
+
+                atlr_profile_start_with_id("bresenham", 0);
+                atlr_draw_line(canvas->pixels, canvas->w, canvas->h, pa, pb, curr_stroke->color);
+                atlr_profile_end();
+
+                atlr_profile_start_with_id("slope", 0);
+                atlr_draw_line_original(canvas->pixels, canvas->w, canvas->h, pa, pb, 0xFFFFFFFF, &draw_memory);
+                atlr_profile_end();
             }
         }
+
 
         sprintf(color_label.data, "0x%08lX", color);
         color_label.len = strlen(color_label.data);
 
-        atlr_rtzr_draw_label(
+        atlr_draw_label(
             canvas->pixels, 
             canvas->w, 
             canvas->h, 
@@ -194,6 +237,9 @@ int main() {
         SDL_RenderClear(renderer);
         SDL_RenderPresent(renderer);
     }
+
+    atlr_profile_end();
+    atlr_profile_print();
 
     atlr_mem_clear(&points_memory);
     atlr_mem_clear(&strokes_memory);

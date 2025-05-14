@@ -47,6 +47,11 @@ setup:
 	@mkdir -p ./build/debug ||:;
 	@mkdir -p ./build/release ||:;
 
+profile:
+	@echo "===== building debug"
+	@rm ./build/debug/* 2> /dev/null ||:;
+	@$(CC) $(CFLAGS) $(LINKED_LIBS) $(NOISE_WARNINGS) -g -DATLR_DEBUG -DATLR_PROFILE main.c -o ./build/debug/$(PROJECT_NAME)
+
 debug:
 	@echo "===== building debug"
 	@rm ./build/debug/* 2> /dev/null ||:;
