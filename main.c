@@ -28,7 +28,7 @@ static AtlrFont canvas_load_font(void* font_data, f32 font_scale, AtlrArena* mem
     stbtt_InitFont(&stb_font, (u8*) font_data, offset);
     f32 pixel_height = stbtt_ScaleForPixelHeight(&stb_font, font_scale);
     AtlrFont atlr_font = atlr_font_create(font_scale, pixel_height, stb_font.numGlyphs, memory);
-    char glyphs[] = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.:'";
+    char glyphs[] = " abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789,.:'-_";
     s32 w, h, x_off, y_off;
     for (u64 i = 0; i < strlen(glyphs); i++) {
         u8 *bitmap = stbtt_GetCodepointBitmap(&stb_font, 0, atlr_font.pixel_height, glyphs[i], &w, &h, &x_off, &y_off);
