@@ -10,6 +10,7 @@
 
 #define CANVAS_DEFAULT_WIDTH 500
 #define CANVAS_DEFAULT_HEIGHT 300
+#define CANVAS_PIXEL_FORMAT SDL_PIXELFORMAT_ABGR32
 
 // TODO: Enable stroke size
 // TODO: Enable color picking
@@ -52,8 +53,7 @@ int main() {
     SDL_Renderer* renderer = SDL_CreateSoftwareRenderer(window_surface);
     SDL_Event e;
 
-    // TODO: should I force the pixel format on this surface?
-    SDL_Surface* canvas = SDL_CreateSurface(CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, window_surface->format);
+    SDL_Surface* canvas = SDL_CreateSurface(CANVAS_DEFAULT_WIDTH, CANVAS_DEFAULT_HEIGHT, CANVAS_PIXEL_FORMAT);
 
     b32 drawing = 0;
     b32 moving = 0;
@@ -150,7 +150,7 @@ int main() {
                 case SDL_EVENT_WINDOW_RESIZED: {
                     window_surface = SDL_GetWindowSurface(window);
                     SDL_DestroySurface(canvas);
-                    canvas = SDL_CreateSurface(window_surface->w, window_surface->h, window_surface->format);
+                    canvas = SDL_CreateSurface(window_surface->w, window_surface->h, CANVAS_PIXEL_FORMAT);
                 } break;
                 default: break;
             }
